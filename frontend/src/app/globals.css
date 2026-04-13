@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-deep: #020617;
+  --bg-card: #0f172a;
+  --bg-panel: #1e293b;
+  --border: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-indigo: #6366f1;
+  --accent-cyan: #22d3ee;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-rose: #f43f5e;
+}
+
+html,
+body {
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-card);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Plotly chart container dark override */
+.js-plotly-plot .plotly .modebar {
+  background: transparent !important;
+}
+.js-plotly-plot .plotly .modebar-btn path {
+  fill: #64748b !important;
+}
+
+/* Drag-and-drop active state */
+.drag-active {
+  border-color: var(--accent-indigo) !important;
+  background-color: rgba(99, 102, 241, 0.05) !important;
+}
+
+/* Log level colours */
+.log-info    { color: #94a3b8; }
+.log-success { color: #10b981; }
+.log-warning { color: #f59e0b; }
+.log-error   { color: #f43f5e; }
+
+/* Table styling */
+.data-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.8rem;
+}
+.data-table th {
+  background: #1e293b;
+  color: #cbd5e1;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #334155;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.data-table td {
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid #1e293b;
+  color: #94a3b8;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.data-table tr:hover td {
+  background: #1e293b;
+}

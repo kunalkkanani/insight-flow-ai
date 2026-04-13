@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  # ── Backend ───────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - backend/.env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - FRONTEND_URL=http://localhost:3000
+      - UPLOAD_DIR=/tmp/insight_flow_uploads
+    volumes:
+      - upload_data:/tmp/insight_flow_uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── Frontend ──────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:8000
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  upload_data:
