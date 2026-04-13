@@ -1,8 +1,8 @@
 """FastAPI application entry point."""
 from __future__ import annotations
 
+import contextlib
 import logging
-import os
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -22,6 +22,26 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# Lifespan (replaces deprecated on_event)
+# ---------------------------------------------------------------------------
+
+
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):  # type: ignore[type-arg]
+    # Startup
+    Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
+    logger.info("✓ %s v%s started", settings.app_name, settings.app_version)
+    logger.info("  Docs: http://%s:%d/docs", settings.host, settings.port)
+    if not settings.anthropic_api_key:
+        logger.warning(
+            "  ⚠  ANTHROPIC_API_KEY not set — heuristic planner + template insights active"
+        )
+    yield
+    # Shutdown
+    logger.info("Shutting down %s", settings.app_name)
+
+
+# ---------------------------------------------------------------------------
 # Application
 # ---------------------------------------------------------------------------
 
@@ -34,6 +54,7 @@ app = FastAPI(
     ),
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # ---------------------------------------------------------------------------
@@ -53,24 +74,3 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 
 app.include_router(router)
-
-# ---------------------------------------------------------------------------
-# Startup / shutdown
-# ---------------------------------------------------------------------------
-
-
-@app.on_event("startup")
-async def startup() -> None:
-    upload_dir = Path(settings.upload_dir)
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    logger.info("✓ %s v%s started", settings.app_name, settings.app_version)
-    logger.info("  Docs: http://%s:%d/docs", settings.host, settings.port)
-    if not settings.anthropic_api_key:
-        logger.warning(
-            "  ⚠  ANTHROPIC_API_KEY not set — heuristic planner + template insights active"
-        )
-
-
-@app.on_event("shutdown")
-async def shutdown() -> None:
-    logger.info("Shutting down %s", settings.app_name)
