@@ -118,10 +118,12 @@ async def execution_agent(
             # ── Execute query ─────────────────────────────────────────────
             rows = execute_query(conn, sql, max_rows=5_000)
 
-            # ── Build chart spec ──────────────────────────────────────────
+            # ── Smart chart-type selection & data validation ───────────────
             spec: dict | None = None
-            if rows and task_type != "overview":
-                spec = build_plotly_spec(rows, chart_type, title, x_col, y_col)
+            if rows and task_type != "overview" and x_col is not None:
+                chart_type = _smart_chart_type(rows, chart_type, x_col, y_col)
+                if _is_plottable(rows, x_col, y_col):
+                    spec = build_plotly_spec(rows, chart_type, title, x_col, y_col)
 
             query_results.append(
                 QueryResult(
@@ -176,6 +178,89 @@ async def execution_agent(
         "agent_logs": logs,
         "errors": errors,
     }
+
+
+# ---------------------------------------------------------------------------
+# Chart intelligence helpers
+# ---------------------------------------------------------------------------
+
+
+def _smart_chart_type(
+    rows: list[dict],
+    chart_type: str,
+    x_col: str,
+    y_col: str | None,
+) -> str:
+    """
+    Override the planner's chart_type when the data shape makes the
+    original choice inappropriate:
+
+    - scatter on categorical x → bar  (e.g. Male/Female on x-axis)
+    - pie with > 10 slices → bar      (pie becomes unreadable)
+    - bar with 2 categories → pie     (e.g. True/False, Male/Female)
+    """
+    x_vals = [r.get(x_col) for r in rows if r.get(x_col) is not None]
+    if not x_vals:
+        return chart_type
+
+    unique_x = len(set(str(v) for v in x_vals))
+
+    # Detect whether x is categorical (strings / very few unique integers)
+    x_is_categorical = False
+    try:
+        float(x_vals[0])
+        # numeric x — check if it looks like a category code (few uniques)
+        if unique_x <= 15:
+            x_is_categorical = True
+    except (ValueError, TypeError):
+        x_is_categorical = True  # definitely a string column
+
+    # scatter on categorical x → bar
+    if chart_type == "scatter" and x_is_categorical:
+        chart_type = "bar"
+
+    # pie gets unreadable beyond 10 slices
+    if chart_type == "pie" and unique_x > 10:
+        chart_type = "bar"
+
+    # binary/small-category distributions → pie is cleaner
+    if chart_type == "bar" and x_is_categorical and 2 <= unique_x <= 5 and y_col:
+        chart_type = "pie"
+
+    return chart_type
+
+
+def _is_plottable(
+    rows: list[dict],
+    x_col: str,
+    y_col: str | None,
+) -> bool:
+    """
+    Return False when the data has no meaningful variation worth charting:
+    - fewer than 2 rows
+    - all y-values are 0 or None  (null-converted column)
+    - only 1 unique x-value
+    """
+    if len(rows) < 2:
+        return False
+
+    x_vals = [r.get(x_col) for r in rows if r.get(x_col) is not None]
+    if len(set(str(v) for v in x_vals)) < 1:
+        return False
+
+    if y_col is not None:
+        y_vals = [r.get(y_col) for r in rows if r.get(y_col) is not None]
+        if not y_vals:
+            return False
+        try:
+            numeric_y = [float(v) for v in y_vals]
+            # All zeros almost certainly means null→0 coercion on a wrong column
+            if all(v == 0.0 for v in numeric_y):
+                return False
+        except (ValueError, TypeError):
+            pass
+
+    return True
 
 
 # ---------------------------------------------------------------------------

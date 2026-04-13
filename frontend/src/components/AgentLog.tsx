@@ -33,7 +33,7 @@ const AGENT_ICONS: Record<string, string> = {
 };
 
 function LevelIcon({ level }: { level: AgentLog["level"] }) {
-  const cls = "w-3.5 h-3.5 shrink-0";
+  const cls = "w-4 h-4 shrink-0";
   switch (level) {
     case "success": return <CheckCircle2 className={clsx(cls, "text-emerald-500 dark:text-emerald-400")} />;
     case "error":   return <AlertCircle  className={clsx(cls, "text-rose-500 dark:text-rose-400")} />;
@@ -66,9 +66,9 @@ export default function AgentLogPanel({ logs, isRunning }: AgentLogProps) {
       </div>
 
       {/* Log entries */}
-      <div className="h-80 overflow-y-auto p-4 space-y-1 font-mono text-xs bg-white dark:bg-slate-900">
+      <div className="h-96 overflow-y-auto p-4 space-y-1.5 font-mono text-sm bg-white dark:bg-slate-900">
         {logs.length === 0 && (
-          <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-600">
+          <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-600 text-sm">
             Waiting for agents…
           </div>
         )}
@@ -76,17 +76,17 @@ export default function AgentLogPanel({ logs, isRunning }: AgentLogProps) {
           <div
             key={i}
             className={clsx(
-              "flex items-start gap-2.5 py-1 px-2 rounded-lg transition-colors animate-fade-in",
+              "flex items-start gap-3 py-1.5 px-3 rounded-lg transition-colors animate-fade-in",
               log.level === "error"   && "bg-rose-50 dark:bg-rose-500/5",
               log.level === "warning" && "bg-amber-50 dark:bg-amber-500/5",
             )}
           >
             <LevelIcon level={log.level} />
-            <span className={clsx("shrink-0 font-medium", AGENT_COLORS[log.agent] ?? "text-slate-500")}>
+            <span className={clsx("shrink-0 font-semibold text-sm", AGENT_COLORS[log.agent] ?? "text-slate-500")}>
               {AGENT_ICONS[log.agent] ?? "•"} {log.agent}
             </span>
             <span className={clsx(
-              "flex-1 min-w-0 break-words",
+              "flex-1 min-w-0 break-words text-sm",
               log.level === "success" && "text-emerald-700 dark:text-emerald-300",
               log.level === "error"   && "text-rose-600 dark:text-rose-300",
               log.level === "warning" && "text-amber-700 dark:text-amber-300",
@@ -94,7 +94,7 @@ export default function AgentLogPanel({ logs, isRunning }: AgentLogProps) {
             )}>
               {log.message}
             </span>
-            <span className="text-slate-300 dark:text-slate-700 text-[10px] shrink-0 tabular-nums">
+            <span className="text-slate-400 dark:text-slate-600 text-xs shrink-0 tabular-nums">
               {new Date(log.timestamp).toLocaleTimeString()}
             </span>
           </div>

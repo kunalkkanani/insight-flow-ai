@@ -117,10 +117,16 @@ export default function ChartGrid({ charts }: ChartGridProps) {
   const { theme } = useTheme();
   const themeLayout = theme === "dark" ? DARK_LAYOUT : LIGHT_LAYOUT;
 
-  if (!charts.length) {
+  // Only show charts that actually have plottable data
+  const plottableCharts = charts.filter(
+    (c) => c.chart_spec?.data && c.chart_spec.data.length > 0
+  );
+
+  if (!plottableCharts.length) {
     return (
-      <div className="flex items-center justify-center h-40 text-slate-400 dark:text-slate-600">
-        No charts available
+      <div className="flex flex-col items-center justify-center h-40 text-slate-400 dark:text-slate-600 gap-2">
+        <BarChart3 className="w-8 h-8 opacity-30" />
+        <p className="text-sm">No charts could be generated for this dataset</p>
       </div>
     );
   }
@@ -130,11 +136,11 @@ export default function ChartGrid({ charts }: ChartGridProps) {
       <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
         Visualisations
         <span className="ml-2 text-sm font-normal text-slate-400 dark:text-slate-500">
-          ({charts.length} charts)
+          ({plottableCharts.length} charts)
         </span>
       </h2>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        {charts.map((chart) => (
+        {plottableCharts.map((chart) => (
           <ChartCard key={chart.id} chart={chart} themeLayout={themeLayout} />
         ))}
       </div>

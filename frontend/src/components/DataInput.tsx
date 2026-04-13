@@ -28,7 +28,7 @@ const DEMO_URLS = [
   },
   {
     label: "Global COVID-19",
-    description: "Country-level · health metrics",
+    description: "200 countries · health metrics",
     url: "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/latest/owid-covid-latest.csv",
   },
   {
@@ -46,10 +46,25 @@ const DEMO_URLS = [
     description: "8K titles · movies & TV",
     url: "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-04-20/netflix_titles.csv",
   },
+  {
+    label: "Coffee Ratings",
+    description: "1.3K coffees · scores + origin",
+    url: "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-07/coffee_ratings.csv",
+  },
+  {
+    label: "US Births 2000–14",
+    description: "5.5K rows · day-of-week trends",
+    url: "https://raw.githubusercontent.com/fivethirtyeight/data/master/births/US_births_2000-2014_SSA.csv",
+  },
+  {
+    label: "College Majors",
+    description: "173 majors · earnings analysis",
+    url: "https://raw.githubusercontent.com/fivethirtyeight/data/master/college-majors/recent-grads.csv",
+  },
 ];
 
 export default function DataInput({ onSessionStart, onError, onUploading }: DataInputProps) {
-  const [tab, setTab] = useState<"file" | "url">("file");
+  const [tab, setTab] = useState<"file" | "url">("url");
   const [url, setUrl] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -182,18 +197,18 @@ export default function DataInput({ onSessionStart, onError, onUploading }: Data
               </button>
             </div>
             <div>
-              <p className="text-slate-400 text-xs mb-2 font-medium uppercase tracking-wider">
+              <p className="text-slate-500 dark:text-slate-400 text-sm mb-3 font-semibold">
                 Quick demos
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {DEMO_URLS.map((d) => (
                   <button
                     key={d.label}
                     onClick={() => setUrl(d.url)}
-                    className="flex flex-col items-start text-left bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:border-indigo-300 dark:hover:border-indigo-500/40 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-lg transition-colors"
+                    className="flex flex-col items-start text-left bg-slate-50 dark:bg-slate-800/60 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:border-indigo-300 dark:hover:border-indigo-500/40 border border-slate-200 dark:border-slate-700 px-3.5 py-3 rounded-xl transition-all"
                   >
-                    <span className="text-xs font-medium text-slate-700 dark:text-slate-200">{d.label}</span>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{d.description}</span>
+                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{d.label}</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{d.description}</span>
                   </button>
                 ))}
               </div>

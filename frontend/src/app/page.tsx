@@ -136,21 +136,21 @@ export default function Home() {
             </div>
 
             {/* Agent pipeline steps */}
-            <div className="flex items-center justify-center gap-1 text-xs text-slate-400 dark:text-slate-600 overflow-x-auto pb-2">
+            <div className="flex items-center justify-center flex-wrap gap-1.5 overflow-x-auto pb-2">
               {["Data Access","Scaling","Schema","Planner","Execution","Insight","Report"].map((name, i) => {
                 const isActive = logs.some((l) =>
                   l.agent.toLowerCase().includes(name.toLowerCase().replace(" ", ""))
                 );
                 return (
-                  <span key={name} className="flex items-center gap-1">
-                    <span className={`px-2 py-1 rounded-lg border transition-colors ${
+                  <span key={name} className="flex items-center gap-1.5">
+                    <span className={`px-3 py-1.5 rounded-xl border font-medium text-sm transition-all ${
                       isActive
-                        ? "border-indigo-400 dark:border-indigo-500/50 text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10"
-                        : "border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-600"
+                        ? "border-indigo-400 dark:border-indigo-500/60 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 shadow-sm"
+                        : "border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-600 bg-white dark:bg-slate-900"
                     }`}>
                       {name}
                     </span>
-                    {i < 6 && <span className="text-slate-300 dark:text-slate-700">→</span>}
+                    {i < 6 && <span className="text-slate-300 dark:text-slate-700 text-sm font-bold">→</span>}
                   </span>
                 );
               })}
