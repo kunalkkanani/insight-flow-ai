@@ -10,31 +10,17 @@ interface DataInputProps {
   onUploading: () => void;
 }
 
+// Sorted by row count — highest first (counts verified via DuckDB)
 const DEMO_URLS = [
   {
-    label: "Titanic",
-    description: "891 rows · survival analysis",
-    url: "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv",
-  },
-  {
     label: "NYC Taxi Jan 2023",
-    description: "3M rows · transport · Parquet",
+    description: "3.07M rows · transport · Parquet",
     url: "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2023-01.parquet",
   },
   {
-    label: "Spotify Songs",
-    description: "32K rows · music analytics",
-    url: "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv",
-  },
-  {
-    label: "Global COVID-19",
-    description: "200 countries · health metrics",
-    url: "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/latest/owid-covid-latest.csv",
-  },
-  {
-    label: "Football Results",
-    description: "47K rows · 150 yrs of matches",
-    url: "https://raw.githubusercontent.com/martj42/international_results/master/results.csv",
+    label: "Billboard Hot 100",
+    description: "328K rows · chart history since 1958",
+    url: "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-09-14/billboard.csv",
   },
   {
     label: "Wine Reviews",
@@ -42,23 +28,58 @@ const DEMO_URLS = [
     url: "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-05-28/winemag-data-130k-v2.csv",
   },
   {
+    label: "NBA Elo Ratings",
+    description: "126K rows · every game since 1946",
+    url: "https://raw.githubusercontent.com/fivethirtyeight/data/master/nba-elo/nbaallelo.csv",
+  },
+  {
+    label: "Football Results",
+    description: "49K rows · intl. matches since 1872",
+    url: "https://raw.githubusercontent.com/martj42/international_results/master/results.csv",
+  },
+  {
+    label: "EPA Vehicle Ratings",
+    description: "42K rows · fuel economy + emissions",
+    url: "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-10-15/big_epa_cars.csv",
+  },
+  {
+    label: "Spotify Songs",
+    description: "33K rows · audio features + genres",
+    url: "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv",
+  },
+  {
+    label: "Diwali Sales",
+    description: "11K rows · retail orders + demographics",
+    url: "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-11-14/diwali_sales_data.csv",
+  },
+  {
     label: "Netflix Catalog",
-    description: "8K titles · movies & TV",
+    description: "7.8K titles · movies & TV shows",
     url: "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-04-20/netflix_titles.csv",
   },
   {
-    label: "Coffee Ratings",
-    description: "1.3K coffees · scores + origin",
-    url: "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-07/coffee_ratings.csv",
-  },
-  {
     label: "US Births 2000–14",
-    description: "5.5K rows · day-of-week trends",
+    description: "5.5K rows · births by day of week",
     url: "https://raw.githubusercontent.com/fivethirtyeight/data/master/births/US_births_2000-2014_SSA.csv",
   },
   {
+    label: "Bigfoot Sightings",
+    description: "5K reports · location + conditions",
+    url: "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-09-13/bigfoot.csv",
+  },
+  {
+    label: "Coffee Ratings",
+    description: "1.3K coffees · cupping scores + origin",
+    url: "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-07/coffee_ratings.csv",
+  },
+  {
+    label: "Titanic",
+    description: "891 rows · survival analysis",
+    url: "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv",
+  },
+  {
     label: "College Majors",
-    description: "173 majors · earnings analysis",
+    description: "173 majors · earnings + employment",
     url: "https://raw.githubusercontent.com/fivethirtyeight/data/master/college-majors/recent-grads.csv",
   },
 ];
