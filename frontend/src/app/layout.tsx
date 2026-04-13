@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ThemeProvider } from "@/lib/theme";
 
 export const metadata: Metadata = {
   title: "Insight Flow AI — Autonomous Data Analyst",
@@ -13,8 +14,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/*
+          Anti-flash script: runs synchronously before React hydrates.
+          Reads localStorage and applies the `dark` class if needed.
+          Default is light (no class added) — matches ThemeProvider state.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark') {
+                  document.documentElement.classList.add('dark');
+                }
+              } catch(e) {}
+            `,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
@@ -26,8 +44,8 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen bg-slate-950 text-slate-100 antialiased">
-        {children}
+      <body className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased transition-colors duration-200">
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

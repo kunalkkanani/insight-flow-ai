@@ -2,19 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------------------------------------------------------
+   Colour tokens — light (default) and dark
+--------------------------------------------------------------------------- */
+
 :root {
-  --bg-deep: #020617;
-  --bg-card: #0f172a;
-  --bg-panel: #1e293b;
-  --border: #334155;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --accent-indigo: #6366f1;
-  --accent-cyan: #22d3ee;
-  --accent-emerald: #10b981;
-  --accent-amber: #f59e0b;
-  --accent-rose: #f43f5e;
+  --bg-deep:       #f8fafc;  /* slate-50  */
+  --bg-card:       #ffffff;
+  --bg-panel:      #f1f5f9;  /* slate-100 */
+  --border:        #e2e8f0;  /* slate-200 */
+  --text-primary:  #0f172a;  /* slate-900 */
+  --text-secondary:#475569;  /* slate-600 */
+  --text-muted:    #94a3b8;  /* slate-400 */
+  --accent:        #4f46e5;  /* indigo-600 */
+}
+
+.dark {
+  --bg-deep:       #020617;  /* slate-950 */
+  --bg-card:       #0f172a;  /* slate-900 */
+  --bg-panel:      #1e293b;  /* slate-800 */
+  --border:        #334155;  /* slate-700 */
+  --text-primary:  #f1f5f9;  /* slate-100 */
+  --text-secondary:#94a3b8;  /* slate-400 */
+  --text-muted:    #64748b;  /* slate-500 */
+  --accent:        #6366f1;  /* indigo-500 */
 }
 
 html,
@@ -25,66 +36,68 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg-card);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #475569;
-}
+/* ---------------------------------------------------------------------------
+   Scrollbar
+--------------------------------------------------------------------------- */
 
-/* Plotly chart container dark override */
-.js-plotly-plot .plotly .modebar {
-  background: transparent !important;
-}
-.js-plotly-plot .plotly .modebar-btn path {
-  fill: #64748b !important;
-}
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: var(--bg-panel); }
+::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-/* Drag-and-drop active state */
+/* ---------------------------------------------------------------------------
+   Plotly dark-mode modebar
+--------------------------------------------------------------------------- */
+
+.js-plotly-plot .plotly .modebar { background: transparent !important; }
+.js-plotly-plot .plotly .modebar-btn path { fill: var(--text-muted) !important; }
+
+/* ---------------------------------------------------------------------------
+   Drag-and-drop active state
+--------------------------------------------------------------------------- */
+
 .drag-active {
-  border-color: var(--accent-indigo) !important;
+  border-color: var(--accent) !important;
   background-color: rgba(99, 102, 241, 0.05) !important;
 }
 
-/* Log level colours */
-.log-info    { color: #94a3b8; }
-.log-success { color: #10b981; }
-.log-warning { color: #f59e0b; }
-.log-error   { color: #f43f5e; }
+/* ---------------------------------------------------------------------------
+   Log level colours (used in AgentLog)
+--------------------------------------------------------------------------- */
 
-/* Table styling */
-.data-table {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 0.8rem;
-}
+.log-info    { color: var(--text-secondary); }
+.log-success { color: #059669; } /* emerald-600 */
+.log-warning { color: #d97706; } /* amber-600   */
+.log-error   { color: #e11d48; } /* rose-600    */
+
+.dark .log-success { color: #10b981; }
+.dark .log-warning { color: #f59e0b; }
+.dark .log-error   { color: #f43f5e; }
+
+/* ---------------------------------------------------------------------------
+   Data preview table
+--------------------------------------------------------------------------- */
+
+.data-table { border-collapse: collapse; width: 100%; font-size: 0.8rem; }
+
 .data-table th {
-  background: #1e293b;
-  color: #cbd5e1;
+  background: var(--bg-panel);
+  color: var(--text-secondary);
   padding: 0.5rem 0.75rem;
   text-align: left;
-  border-bottom: 1px solid #334155;
+  border-bottom: 1px solid var(--border);
   white-space: nowrap;
   font-weight: 500;
 }
+
 .data-table td {
   padding: 0.4rem 0.75rem;
-  border-bottom: 1px solid #1e293b;
-  color: #94a3b8;
+  border-bottom: 1px solid var(--bg-panel);
+  color: var(--text-secondary);
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.data-table tr:hover td {
-  background: #1e293b;
-}
+
+.data-table tr:hover td { background: var(--bg-panel); }
