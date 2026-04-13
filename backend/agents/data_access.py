@@ -21,6 +21,10 @@ from ..tools.metadata_tool import get_file_metadata, get_url_metadata
 logger = logging.getLogger(__name__)
 AGENT = "DataAccessAgent"
 
+# Common NA sentinel strings that appear in real-world CSVs.
+# DuckDB will treat any of these as NULL rather than trying to cast them.
+_CSV_NULL_STRINGS = ["NA", "N/A", "n/a", "nan", "NaN", "NAN", "null", "NULL", "None", "NONE", "#N/A", "#NA", ""]
+
 _READ_FN = {
     "csv": "read_csv_auto",
     "parquet": "read_parquet",
@@ -85,7 +89,23 @@ async def data_access_agent(
 
         # Quote the path to handle spaces and special chars
         escaped = source_path.replace("'", "''")
-        view_sql = f"CREATE OR REPLACE VIEW {raw_table} AS SELECT * FROM {read_fn}('{escaped}')"
+
+        if fmt == "csv":
+            # Build nullstr list so DuckDB treats "NA", "N/A", "nan", etc. as NULL
+            # instead of crashing when it hits them in a column it inferred as numeric.
+            # sample_size=-1 scans the full file for type detection, preventing
+            # late-row surprises like the football CSV's unplayed future fixtures.
+            null_list = ", ".join(f"'{s}'" for s in _CSV_NULL_STRINGS)
+            view_sql = (
+                f"CREATE OR REPLACE VIEW {raw_table} AS "
+                f"SELECT * FROM {read_fn}('{escaped}', "
+                f"nullstr=[{null_list}], "
+                f"sample_size=-1, "
+                f"ignore_errors=false)"
+            )
+        else:
+            view_sql = f"CREATE OR REPLACE VIEW {raw_table} AS SELECT * FROM {read_fn}('{escaped}')"
+
         conn.execute(view_sql)
 
         logs.append(_log("info", f"Registered view via {read_fn}()"))
