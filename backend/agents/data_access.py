@@ -126,18 +126,19 @@ async def data_access_agent(
             # late-row surprises like the football CSV's unplayed future fixtures.
             null_list = ", ".join(f"'{s}'" for s in _CSV_NULL_STRINGS)
 
-            def _csv_view_sql(encoding: str = "") -> str:
+            def _base_read_expr(encoding: str = "") -> str:
+                """Return the bare SELECT…FROM read_csv_auto(…) expression (no CREATE VIEW)."""
                 enc_part = f", encoding='{encoding}'" if encoding else ""
                 return (
-                    f"CREATE OR REPLACE VIEW {raw_table} AS "
                     f"SELECT * FROM {read_fn}('{escaped}', "
                     f"nullstr=[{null_list}], "
                     f"sample_size=-1, "
                     f"ignore_errors=false{enc_part})"
                 )
 
+            base_expr = _base_read_expr()
             try:
-                conn.execute(_csv_view_sql())
+                conn.execute(f"CREATE OR REPLACE VIEW {raw_table} AS {base_expr}")
             except Exception as enc_exc:
                 # Retry with LATIN-1 if the file has non-UTF-8 characters
                 # (e.g. datasets with names containing ü, é, ñ etc.)
@@ -145,16 +146,40 @@ async def data_access_agent(
                     logs.append(_log("warning", "Non-UTF-8 characters detected — retrying with LATIN-1 encoding"))
                     if queue:
                         await queue.put({"type": "log", "data": logs[-1]})
-                    conn.execute(_csv_view_sql("LATIN-1"))
+                    base_expr = _base_read_expr("LATIN-1")
+                    conn.execute(f"CREATE OR REPLACE VIEW {raw_table} AS {base_expr}")
                 else:
                     raise
         else:
-            view_sql = f"CREATE OR REPLACE VIEW {raw_table} AS SELECT * FROM {read_fn}('{escaped}')"
-            conn.execute(view_sql)
+            base_expr = f"SELECT * FROM {read_fn}('{escaped}')"
+            conn.execute(f"CREATE OR REPLACE VIEW {raw_table} AS {base_expr}")
 
         logs.append(_log("info", f"Registered view via {read_fn}()"))
         if queue:
             await queue.put({"type": "log", "data": logs[-1]})
+
+        # ── 3b. Strip pandas-style auto-index columns ───────────────────────
+        # When a CSV is saved with df.to_csv() and the row index is included,
+        # the first column has an empty header. DuckDB renames it to "column00".
+        # Pandas itself names it "Unnamed: 0". Both are useless row-index columns.
+        # IMPORTANT: recreate from base_expr, NOT from the view itself (avoids
+        # DuckDB "infinite recursion" error on self-referential views).
+        import re as _re
+        describe = execute_query(conn, f"DESCRIBE {raw_table}")
+        junk_cols = []
+        for r in describe:
+            col = str(r.get("column_name", ""))
+            if col.lower().startswith("unnamed:") or _re.fullmatch(r"column\d{2}", col):
+                junk_cols.append(col)
+        if junk_cols:
+            exclude_expr = ", ".join(f'"{c}"' for c in junk_cols)
+            conn.execute(
+                f"CREATE OR REPLACE VIEW {raw_table} AS "
+                f"SELECT * EXCLUDE ({exclude_expr}) FROM ({base_expr})"
+            )
+            logs.append(_log("warning", f"Dropped auto-index column(s): {', '.join(junk_cols)}"))
+            if queue:
+                await queue.put({"type": "log", "data": logs[-1]})
 
         # ── 4. Row / column counts ──────────────────────────────────────────
         row_count = int(execute_scalar(conn, f"SELECT COUNT(*) FROM {raw_table}") or 0)

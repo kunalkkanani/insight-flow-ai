@@ -383,14 +383,29 @@ def _generate_sql(
                 # Default: day — gives ~7–365 points for typical datasets.
                 trunc = "day"
 
+            # Filter dates to the 1st–99th percentile range to exclude corrupt
+            # epoch rows (e.g. 1970-01-01 entries in the NYC Taxi dataset).
             sql = f"""
+                WITH date_bounds AS (
+                    SELECT
+                        PERCENTILE_CONT(0.01) WITHIN GROUP (
+                            ORDER BY EPOCH(TRY_CAST({qc(date_col)} AS TIMESTAMP))
+                        ) AS lo_epoch,
+                        PERCENTILE_CONT(0.99) WITHIN GROUP (
+                            ORDER BY EPOCH(TRY_CAST({qc(date_col)} AS TIMESTAMP))
+                        ) AS hi_epoch
+                    FROM {table}
+                    WHERE {qc(date_col)} IS NOT NULL
+                )
                 SELECT
                     DATE_TRUNC('{trunc}', TRY_CAST({qc(date_col)} AS TIMESTAMP)) AS period,
                     SUM({qc(val_col)}::DOUBLE)   AS total_value,
                     AVG({qc(val_col)}::DOUBLE)   AS avg_value,
                     COUNT(*)                      AS count
-                FROM {table}
+                FROM {table}, date_bounds
                 WHERE {qc(date_col)} IS NOT NULL AND {qc(val_col)} IS NOT NULL
+                  AND EPOCH(TRY_CAST({qc(date_col)} AS TIMESTAMP)) >= lo_epoch
+                  AND EPOCH(TRY_CAST({qc(date_col)} AS TIMESTAMP)) <= hi_epoch
                 GROUP BY period
                 ORDER BY period
                 LIMIT 365
