@@ -87,9 +87,9 @@ function ChartCard({ chart, themeLayout }: { chart: ChartItem; themeLayout: obje
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
       <div className="mb-2">
-        <h3 className="font-semibold text-slate-800 dark:text-slate-200 text-sm truncate">{chart.title}</h3>
+        <h3 className="font-semibold text-slate-800 dark:text-slate-200 text-base truncate">{chart.title}</h3>
         {chart.description && (
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">{chart.description}</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5 truncate">{chart.description}</p>
         )}
       </div>
       <Plot
@@ -133,9 +133,9 @@ export default function ChartGrid({ charts }: ChartGridProps) {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+      <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
         Visualisations
-        <span className="ml-2 text-sm font-normal text-slate-400 dark:text-slate-500">
+        <span className="ml-2 text-base font-normal text-slate-400 dark:text-slate-500">
           ({plottableCharts.length} charts)
         </span>
       </h2>

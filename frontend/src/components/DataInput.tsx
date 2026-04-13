@@ -106,10 +106,9 @@ export default function DataInput({ onSessionStart, onError, onUploading }: Data
   const handleUrl = async () => {
     if (!url.trim()) return;
     setLoading(true);
-    onUploading();
     try {
       const sessionId = await analyzeUrl(url.trim());
-      onSessionStart(sessionId);
+      onSessionStart(sessionId);  // jumps straight to "analyzing" — no upload step
     } catch (err: unknown) {
       onError(err instanceof Error ? err.message : "URL analysis failed");
       setLoading(false);
@@ -148,7 +147,7 @@ export default function DataInput({ onSessionStart, onError, onUploading }: Data
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg text-base font-medium transition-all ${
                 tab === t
                   ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
                   : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
@@ -206,7 +205,7 @@ export default function DataInput({ onSessionStart, onError, onUploading }: Data
                 onChange={(e) => setUrl(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleUrl()}
                 placeholder="https://example.com/data.csv"
-                className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-base text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
               />
               <button
                 onClick={handleUrl}
@@ -218,7 +217,7 @@ export default function DataInput({ onSessionStart, onError, onUploading }: Data
               </button>
             </div>
             <div>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mb-3 font-semibold">
+              <p className="text-slate-500 dark:text-slate-400 text-base mb-3 font-semibold">
                 Quick demos
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -228,8 +227,8 @@ export default function DataInput({ onSessionStart, onError, onUploading }: Data
                     onClick={() => setUrl(d.url)}
                     className="flex flex-col items-start text-left bg-slate-50 dark:bg-slate-800/60 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:border-indigo-300 dark:hover:border-indigo-500/40 border border-slate-200 dark:border-slate-700 px-3.5 py-3 rounded-xl transition-all"
                   >
-                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{d.label}</span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{d.description}</span>
+                    <span className="text-base font-semibold text-slate-800 dark:text-slate-100">{d.label}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{d.description}</span>
                   </button>
                 ))}
               </div>
@@ -239,7 +238,7 @@ export default function DataInput({ onSessionStart, onError, onUploading }: Data
       </div>
 
       {/* Feature pills */}
-      <div className="mt-8 flex flex-wrap justify-center gap-3 text-xs text-slate-400">
+      <div className="mt-8 flex flex-wrap justify-center gap-3 text-sm text-slate-400">
         {["8 specialised agents","DuckDB-powered","Scales to millions of rows","Interactive charts","AI insights"].map((f) => (
           <span key={f} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-500 px-3 py-1.5 rounded-full shadow-sm">
             {f}

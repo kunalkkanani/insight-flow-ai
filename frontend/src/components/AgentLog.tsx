@@ -54,21 +54,21 @@ export default function AgentLogPanel({ logs, isRunning }: AgentLogProps) {
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">Agent Activity</span>
+          <span className="text-base font-semibold text-slate-800 dark:text-slate-200">Agent Activity</span>
           {isRunning && (
-            <span className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400">
-              <Loader2 className="w-3 h-3 animate-spin" />
+            <span className="flex items-center gap-1.5 text-sm text-indigo-600 dark:text-indigo-400">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
               Running…
             </span>
           )}
         </div>
-        <span className="text-xs text-slate-400">{logs.length} events</span>
+        <span className="text-sm text-slate-400">{logs.length} events</span>
       </div>
 
       {/* Log entries */}
-      <div className="h-96 overflow-y-auto p-4 space-y-1.5 font-mono text-sm bg-white dark:bg-slate-900">
+      <div className="h-96 overflow-y-auto p-4 space-y-1.5 font-mono text-base bg-white dark:bg-slate-900">
         {logs.length === 0 && (
-          <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-600 text-sm">
+          <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-600 text-base">
             Waiting for agents…
           </div>
         )}
@@ -82,11 +82,11 @@ export default function AgentLogPanel({ logs, isRunning }: AgentLogProps) {
             )}
           >
             <LevelIcon level={log.level} />
-            <span className={clsx("shrink-0 font-semibold text-sm", AGENT_COLORS[log.agent] ?? "text-slate-500")}>
+            <span className={clsx("shrink-0 font-semibold text-base", AGENT_COLORS[log.agent] ?? "text-slate-500")}>
               {AGENT_ICONS[log.agent] ?? "•"} {log.agent}
             </span>
             <span className={clsx(
-              "flex-1 min-w-0 break-words text-sm",
+              "flex-1 min-w-0 break-words text-base",
               log.level === "success" && "text-emerald-700 dark:text-emerald-300",
               log.level === "error"   && "text-rose-600 dark:text-rose-300",
               log.level === "warning" && "text-amber-700 dark:text-amber-300",
@@ -94,7 +94,7 @@ export default function AgentLogPanel({ logs, isRunning }: AgentLogProps) {
             )}>
               {log.message}
             </span>
-            <span className="text-slate-400 dark:text-slate-600 text-xs shrink-0 tabular-nums">
+            <span className="text-slate-400 dark:text-slate-600 text-sm shrink-0 tabular-nums">
               {new Date(log.timestamp).toLocaleTimeString()}
             </span>
           </div>

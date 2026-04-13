@@ -40,12 +40,13 @@ export async function analyzeFile(file: File): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
-// Analysis — URL (small JSON body, proxy is fine)
+// Analysis — URL (direct, no proxy — backend may take time to respond
+//             if it pre-fetches metadata; also avoids proxy ECONNRESET)
 // ---------------------------------------------------------------------------
 
 export async function analyzeUrl(url: string): Promise<string> {
   const { data } = await axios.post<{ session_id: string }>(
-    `${PROXY_BASE}/analyze/url`,
+    `${DIRECT_BASE}/analyze/url`,
     { url }
   );
   return data.session_id;

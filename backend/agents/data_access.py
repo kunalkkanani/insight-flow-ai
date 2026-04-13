@@ -10,10 +10,13 @@ from __future__ import annotations
 
 import datetime
 import logging
+from pathlib import Path
 from typing import Any
 
+import httpx
 from langgraph.types import RunnableConfig
 
+from ..config import settings
 from ..graph.state import AgentLog, AnalysisState
 from ..tools.duckdb_tool import create_connection, execute_query, execute_scalar
 from ..tools.metadata_tool import get_file_metadata, get_url_metadata
@@ -30,6 +33,19 @@ _READ_FN = {
     "parquet": "read_parquet",
     "json": "read_json_auto",
 }
+
+
+async def _download_url(url: str, dest_dir: Path, filename: str) -> Path:
+    """Stream-download *url* into *dest_dir/filename* and return the local path."""
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / filename
+    async with httpx.AsyncClient(timeout=300, follow_redirects=True) as client:
+        async with client.stream("GET", url) as r:
+            r.raise_for_status()
+            with open(dest, "wb") as fh:
+                async for chunk in r.aiter_bytes(chunk_size=1 << 20):  # 1 MB chunks
+                    fh.write(chunk)
+    return dest
 
 
 def _log(level: str, msg: str) -> AgentLog:
@@ -64,7 +80,20 @@ async def data_access_agent(
             source_path = file_path
         elif input_type == "url" and url:
             meta = await get_url_metadata(url)
-            source_path = url
+            # Download the remote file to local disk so every subsequent DuckDB
+            # query reads from disk instead of making repeated HTTP range requests
+            # to the CDN (which causes ECONNRESET / HTTP 0 errors on large files).
+            dest_dir = Path(settings.upload_dir) / state["session_id"]
+            logs.append(_log("info", f"Downloading {meta['name']} ({meta['size_mb']:.1f} MB)…"))
+            if queue:
+                await queue.put({"type": "log", "data": logs[-1]})
+            local_path = await _download_url(url, dest_dir, meta["name"])
+            source_path = str(local_path)
+            # Refresh metadata from the local file (size is now exact)
+            meta = await get_file_metadata(source_path)
+            logs.append(_log("success", f"Downloaded to local cache ({meta['size_mb']:.1f} MB)"))
+            if queue:
+                await queue.put({"type": "log", "data": logs[-1]})
         else:
             raise ValueError("No valid input: provide a file upload or a URL.")
 
@@ -96,17 +125,32 @@ async def data_access_agent(
             # sample_size=-1 scans the full file for type detection, preventing
             # late-row surprises like the football CSV's unplayed future fixtures.
             null_list = ", ".join(f"'{s}'" for s in _CSV_NULL_STRINGS)
-            view_sql = (
-                f"CREATE OR REPLACE VIEW {raw_table} AS "
-                f"SELECT * FROM {read_fn}('{escaped}', "
-                f"nullstr=[{null_list}], "
-                f"sample_size=-1, "
-                f"ignore_errors=false)"
-            )
+
+            def _csv_view_sql(encoding: str = "") -> str:
+                enc_part = f", encoding='{encoding}'" if encoding else ""
+                return (
+                    f"CREATE OR REPLACE VIEW {raw_table} AS "
+                    f"SELECT * FROM {read_fn}('{escaped}', "
+                    f"nullstr=[{null_list}], "
+                    f"sample_size=-1, "
+                    f"ignore_errors=false{enc_part})"
+                )
+
+            try:
+                conn.execute(_csv_view_sql())
+            except Exception as enc_exc:
+                # Retry with LATIN-1 if the file has non-UTF-8 characters
+                # (e.g. datasets with names containing ü, é, ñ etc.)
+                if "unicode" in str(enc_exc).lower() or "utf" in str(enc_exc).lower():
+                    logs.append(_log("warning", "Non-UTF-8 characters detected — retrying with LATIN-1 encoding"))
+                    if queue:
+                        await queue.put({"type": "log", "data": logs[-1]})
+                    conn.execute(_csv_view_sql("LATIN-1"))
+                else:
+                    raise
         else:
             view_sql = f"CREATE OR REPLACE VIEW {raw_table} AS SELECT * FROM {read_fn}('{escaped}')"
-
-        conn.execute(view_sql)
+            conn.execute(view_sql)
 
         logs.append(_log("info", f"Registered view via {read_fn}()"))
         if queue:

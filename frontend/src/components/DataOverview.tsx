@@ -12,11 +12,11 @@ interface DataOverviewProps {
 }
 
 const CATEGORY_ICON: Record<string, React.ReactNode> = {
-  numeric:     <Hash className="w-3.5 h-3.5" />,
-  datetime:    <Calendar className="w-3.5 h-3.5" />,
-  categorical: <Type className="w-3.5 h-3.5" />,
-  boolean:     <ToggleLeft className="w-3.5 h-3.5" />,
-  text:        <FileText className="w-3.5 h-3.5" />,
+  numeric:     <Hash className="w-4 h-4" />,
+  datetime:    <Calendar className="w-4 h-4" />,
+  categorical: <Type className="w-4 h-4" />,
+  boolean:     <ToggleLeft className="w-4 h-4" />,
+  text:        <FileText className="w-4 h-4" />,
 };
 
 const CATEGORY_COLOR: Record<string, string> = {
@@ -30,8 +30,8 @@ const CATEGORY_COLOR: Record<string, string> = {
 function StatBadge({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
-      <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">{label}</p>
-      <p className="text-xl font-bold text-slate-900 dark:text-white">{value}</p>
+      <p className="text-sm text-slate-400 dark:text-slate-500 mb-1 font-medium">{label}</p>
+      <p className="text-2xl font-bold text-slate-900 dark:text-white">{value}</p>
     </div>
   );
 }
@@ -42,26 +42,26 @@ function ColumnRow({ col }: { col: ColumnInfo }) {
 
   return (
     <tr className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-      <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200 text-sm">{col.name}</td>
+      <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200 text-base">{col.name}</td>
       <td className="px-4 py-3">
-        <span className={clsx("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border", colorCls)}>
+        <span className={clsx("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-medium border", colorCls)}>
           {CATEGORY_ICON[col.category]}
           {col.category}
         </span>
       </td>
-      <td className="px-4 py-3 text-xs text-slate-400 font-mono">{col.dtype}</td>
+      <td className="px-4 py-3 text-sm text-slate-400 font-mono">{col.dtype}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1.5">
-          {missingBad && <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />}
-          <span className={clsx("text-sm", missingBad ? "text-rose-500 dark:text-rose-400" : "text-slate-500 dark:text-slate-400")}>
+          {missingBad && <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />}
+          <span className={clsx("text-base", missingBad ? "text-rose-500 dark:text-rose-400" : "text-slate-500 dark:text-slate-400")}>
             {col.missing_pct.toFixed(1)}%
           </span>
         </div>
       </td>
-      <td className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400 tabular-nums">
+      <td className="px-4 py-3 text-base text-slate-500 dark:text-slate-400 tabular-nums">
         {col.unique_count.toLocaleString()}
       </td>
-      <td className="px-4 py-3 text-xs text-slate-400 max-w-[200px] truncate">
+      <td className="px-4 py-3 text-sm text-slate-400 max-w-[200px] truncate">
         {col.category === "numeric" && col.mean_val != null
           ? `μ=${col.mean_val?.toFixed(2)} σ=${col.std_val?.toFixed(2)}`
           : col.sample_values?.slice(0, 3).join(", ")}
@@ -80,7 +80,7 @@ export default function DataOverview({ report }: DataOverviewProps) {
     <div className="space-y-6">
       {/* Stats */}
       <div>
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Dataset Overview</h2>
+        <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">Dataset Overview</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <StatBadge label="Rows"     value={dataset.row_count.toLocaleString()} />
           <StatBadge label="Columns"  value={dataset.column_count} />
@@ -95,14 +95,14 @@ export default function DataOverview({ report }: DataOverviewProps) {
 
       {/* Schema table */}
       <div>
-        <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-3">Column Schema</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-3">Column Schema</h3>
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-base">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60">
                   {["Column","Type","dtype","Missing %","Unique","Stats / Samples"].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    <th key={h} className="px-4 py-3 text-left text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       {h}
                     </th>
                   ))}
@@ -121,11 +121,11 @@ export default function DataOverview({ report }: DataOverviewProps) {
         <div>
           <button
             onClick={() => setPreviewOpen(!previewOpen)}
-            className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-white mb-3 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+            className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-white mb-3 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
           >
-            <Database className="w-4 h-4" />
+            <Database className="w-5 h-5" />
             Data Preview (5 rows)
-            <span className="text-slate-400 text-sm font-normal ml-1">
+            <span className="text-slate-400 text-base font-normal ml-1">
               {previewOpen ? "▲ Hide" : "▼ Show"}
             </span>
           </button>

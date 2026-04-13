@@ -91,11 +91,11 @@ export default function Home() {
       {/* Global top bar */}
       <header className="sticky top-0 z-50 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <Zap className="w-4 h-4 text-white" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
+              <Zap className="w-5 h-5 text-white" />
             </div>
-            <span className="font-semibold text-slate-900 dark:text-white text-sm">
+            <span className="font-bold text-slate-900 dark:text-white text-lg">
               Insight Flow AI
             </span>
           </div>
@@ -115,42 +115,49 @@ export default function Home() {
 
         {/* ── UPLOADING ─────────────────────────────────────────────────────── */}
         {phase === "uploading" && (
-          <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
-            <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
-            <p className="text-slate-500 dark:text-slate-400">Uploading dataset…</p>
+          <div className="flex flex-col items-center justify-center min-h-[40vh] gap-6">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-semibold text-slate-800 dark:text-slate-200">Uploading file…</p>
+              <p className="text-slate-500 dark:text-slate-400 text-base mt-1">Transferring to the analysis server</p>
+            </div>
           </div>
         )}
 
         {/* ── ANALYZING ─────────────────────────────────────────────────────── */}
         {phase === "analyzing" && (
-          <div className="max-w-3xl mx-auto space-y-6">
+          <div className="max-w-5xl mx-auto space-y-6">
             <div className="text-center">
-              <div className="inline-flex items-center gap-2 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-full px-4 py-1.5 text-indigo-600 dark:text-indigo-400 text-sm mb-4">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <div className="inline-flex items-center gap-2 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-full px-4 py-1.5 text-indigo-600 dark:text-indigo-400 text-base mb-4">
+                <Loader2 className="w-4 h-4 animate-spin" />
                 Agents running…
               </div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Analysing Dataset</h2>
-              <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Analysing Dataset</h2>
+              <p className="text-slate-500 dark:text-slate-400 mt-2 text-base">
                 8 specialised agents are working on your data
               </p>
             </div>
 
             {/* Agent pipeline steps */}
-            <div className="flex items-center justify-center flex-wrap gap-1.5 overflow-x-auto pb-2">
+            <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2 flex-nowrap">
               {["Data Access","Scaling","Schema","Planner","Execution","Insight","Report"].map((name, i) => {
                 const isActive = logs.some((l) =>
                   l.agent.toLowerCase().includes(name.toLowerCase().replace(" ", ""))
                 );
                 return (
-                  <span key={name} className="flex items-center gap-1.5">
-                    <span className={`px-3 py-1.5 rounded-xl border font-medium text-sm transition-all ${
+                  <span key={name} className="flex items-center gap-2">
+                    <span className={`px-4 py-2 rounded-xl border font-semibold text-base transition-all ${
                       isActive
                         ? "border-indigo-400 dark:border-indigo-500/60 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 shadow-sm"
                         : "border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-600 bg-white dark:bg-slate-900"
                     }`}>
                       {name}
                     </span>
-                    {i < 6 && <span className="text-slate-300 dark:text-slate-700 text-sm font-bold">→</span>}
+                    {i < 6 && <span className="text-slate-300 dark:text-slate-700 text-base font-bold">→</span>}
                   </span>
                 );
               })}
