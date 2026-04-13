@@ -127,7 +127,7 @@ insight-flow-ai/
 │   └── main.py               # FastAPI app
 ├── frontend/
 │   └── src/
-│       ├── app/              # Next.js 14 App Router
+│       ├── app/              # Next.js 16
 │       ├── components/       # React components
 │       └── lib/              # Types + API client
 ├── examples/
