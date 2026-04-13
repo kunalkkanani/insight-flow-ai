@@ -74,13 +74,30 @@ function ChartCard({ chart, themeLayout }: { chart: ChartItem; themeLayout: obje
     );
   }
 
+  // Deep-merge: theme provides colours/grid/fonts; spec provides axis TYPE and title text.
+  // A flat spread (`...themeLayout`) would wipe out `type: "category"` / `type: "linear"`
+  // set by the backend, causing Plotly to mis-detect numeric labels as calendar years.
+  const specLayout  = (chart.chart_spec.layout  ?? {}) as Record<string, Record<string, unknown>>;
+  const theme       = themeLayout as Record<string, Record<string, unknown>>;
+
+  const mergeAxis = (axis: "xaxis" | "yaxis") => ({
+    ...theme[axis],               // theme colours, grid, fonts
+    ...(specLayout[axis] ?? {}),  // spec's type, title, automargin — takes precedence
+    // Always override colours with the current theme so dark/light mode works
+    gridcolor:     theme[axis]?.gridcolor,
+    zerolinecolor: theme[axis]?.zerolinecolor,
+    linecolor:     theme[axis]?.linecolor,
+    tickfont:      theme[axis]?.tickfont,
+  });
+
   const mergedLayout = {
-    ...(chart.chart_spec.layout as object),
-    ...themeLayout,
-    // Restore title text from the original spec
+    ...specLayout,
+    ...theme,
+    xaxis: mergeAxis("xaxis"),
+    yaxis: mergeAxis("yaxis"),
     title: {
-      ...(themeLayout as Record<string, Record<string, unknown>>)["title"],
-      text: (chart.chart_spec.layout as Record<string, Record<string, unknown>>)?.["title"]?.["text"] ?? chart.title,
+      ...theme["title"],
+      text: specLayout?.["title"]?.["text"] ?? chart.title,
     },
   };
 

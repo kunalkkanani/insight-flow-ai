@@ -27,28 +27,28 @@ AGENT = "PlannerAgent"
 # System prompt (token-efficient — LLM sees only schema, never raw data)
 # ---------------------------------------------------------------------------
 
-_SYSTEM = """You are an expert data analyst. Given a dataset schema summary, design the best exploratory data analysis plan.
+_SYSTEM = """You are an expert data analyst. Given a dataset schema, design the most insightful EDA plan.
 
-Return ONLY a JSON array (no markdown, no explanation) of 5–7 analysis tasks. Each element:
+Return ONLY a JSON array (no markdown, no explanation) of 6–8 analysis tasks. Each element:
 {
   "type": "distribution" | "correlation" | "time_series" | "aggregation" | "anomaly" | "overview",
   "title": "Short human-readable title",
-  "description": "One sentence: what this analysis reveals",
+  "description": "One sentence: what this reveals",
   "columns": ["col1", ...],
-  "chart_type": "bar" | "line" | "scatter" | "heatmap" | "pie" | "box" | "histogram",
+  "chart_type": "bar" | "line" | "scatter" | "heatmap" | "pie" | "histogram",
   "priority": 1–5
 }
 
-Rules:
-- Always include exactly one "overview" task (priority 1)
-- Prefer "heatmap" chart_type for correlation tasks with many columns
-- Prefer "scatter" for two-column correlation
-- Prefer "line" for time_series
-- Prefer "histogram" for numeric distributions
-- Prefer "bar" for categorical distributions and aggregations
-- If datetime columns exist, include time_series using the most relevant numeric column
-- Choose analyses that reveal the most business/domain insight
-- Columns must be from the provided schema"""
+STRICT RULES — follow every one:
+1. Always include exactly one "overview" task (priority 1).
+2. NEVER use high-cardinality text columns (marked [TEXT/ID]) in grouping or correlation — they are IDs or free text.
+3. For categorical grouping/aggregation, ONLY use LOW-CARDINALITY categoricals (marked [CAT], unique_count < 50).
+4. For numeric distributions: use "histogram" chart_type — do NOT use "bar".
+5. For categorical distributions (value counts): use "bar" chart_type.
+6. For correlation with 3+ numeric cols → "heatmap"; exactly 2 → "scatter".
+7. For time_series: always pair a datetime column with a meaningful numeric column.
+8. Choose tasks that expose real patterns, trends, or anomalies — avoid redundant or trivial analyses.
+9. Columns listed in "columns" MUST exist exactly in the provided schema."""
 
 
 def _log(level: str, msg: str) -> AgentLog:
@@ -81,16 +81,40 @@ async def planner_agent(
     if queue:
         await queue.put({"type": "log", "data": logs[-1]})
 
-    # Build a compact schema summary (token-efficient)
+    # Build a rich schema summary so Claude can make smarter chart choices.
+    # Include cardinality tags so Claude avoids grouping by ID/free-text columns.
     stats_summary: dict[str, Any] = {}
     for col in columns:
-        if col["category"] == "numeric":
-            stats_summary[col["name"]] = {
+        cat = col["category"]
+        uniq = col.get("unique_count", 0)
+        missing = col.get("missing_pct", 0)
+        samples = col.get("sample_values") or []
+
+        entry: dict[str, Any] = {"category": cat, "unique": uniq, "missing_pct": missing}
+
+        if cat == "numeric":
+            entry.update({
                 "min": col.get("min_val"),
                 "max": col.get("max_val"),
                 "mean": col.get("mean_val"),
-                "missing_pct": col.get("missing_pct"),
-            }
+                "std": col.get("std_val"),
+            })
+        elif cat in ("categorical", "text", "boolean"):
+            # Show top sample values so Claude knows what the column contains
+            entry["samples"] = [str(v) for v in samples[:5]]
+            # Tag cardinality so Claude knows what's safe to group by
+            if cat == "text" or uniq > 500:
+                entry["tag"] = "[TEXT/ID — do not group]"
+            elif uniq <= 2:
+                entry["tag"] = "[BINARY]"
+            elif uniq <= 20:
+                entry["tag"] = "[CAT — low cardinality, good for grouping]"
+            else:
+                entry["tag"] = "[CAT — medium cardinality]"
+        elif cat == "datetime":
+            entry["samples"] = [str(v) for v in samples[:3]]
+
+        stats_summary[col["name"]] = entry
 
     # ── LLM planning ──────────────────────────────────────────────────────
     plan: list[AnalysisTask] = []
@@ -105,10 +129,10 @@ async def planner_agent(
         except Exception as exc:
             logger.warning("LLM planning failed, using heuristics: %s", exc)
             logs.append(_log("warning", f"LLM planning failed ({exc}), using heuristics"))
-            plan = _heuristic_plan(numeric_cols, categorical_cols, datetime_cols)
+            plan = _heuristic_plan(numeric_cols, categorical_cols, datetime_cols, columns)
     else:
         logs.append(_log("info", "No API key — using heuristic planner"))
-        plan = _heuristic_plan(numeric_cols, categorical_cols, datetime_cols)
+        plan = _heuristic_plan(numeric_cols, categorical_cols, datetime_cols, columns)
         logs.append(_log("success", f"Heuristic plan: {len(plan)} tasks"))
 
     if queue:
@@ -144,12 +168,13 @@ async def _llm_plan(
     client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
     user_msg = (
-        f"Dataset: {filename}\n"
-        f"Rows: {row_count:,}\n\n"
-        f"Numeric columns ({len(numeric_cols)}): {', '.join(numeric_cols[:10])}\n"
-        f"Categorical columns ({len(categorical_cols)}): {', '.join(categorical_cols[:10])}\n"
-        f"Datetime columns ({len(datetime_cols)}): {', '.join(datetime_cols[:5])}\n\n"
-        f"Numeric stats (sample):\n{json.dumps(stats_summary, indent=2)[:1500]}"
+        f"Dataset: {filename}  |  Rows: {row_count:,}\n\n"
+        f"=== FULL SCHEMA (use ONLY these column names) ===\n"
+        f"{json.dumps(stats_summary, indent=2)[:3000]}\n\n"
+        f"Numeric cols: {numeric_cols[:15]}\n"
+        f"Low-cardinality categoricals (safe to group): "
+        f"{[c for c in categorical_cols if (stats_summary.get(c, {}).get('unique', 999)) <= 50][:10]}\n"
+        f"Datetime cols: {datetime_cols[:5]}"
     )
 
     response = await client.messages.create(
@@ -191,7 +216,14 @@ def _heuristic_plan(
     numeric_cols: list[str],
     categorical_cols: list[str],
     datetime_cols: list[str],
+    columns: list[dict] | None = None,
 ) -> list[AnalysisTask]:
+    # Filter categoricals to only low-cardinality ones that are safe to group by.
+    col_lookup = {c["name"]: c for c in (columns or [])}
+    safe_cats = [
+        c for c in categorical_cols
+        if col_lookup.get(c, {}).get("unique_count", 999) <= 50
+    ] or categorical_cols[:3]  # fallback if no column metadata
     tasks: list[AnalysisTask] = []
 
     # 1. Always: overview
@@ -215,13 +247,13 @@ def _heuristic_plan(
             priority=2,
         ))
 
-    # 3. Distribution — first categorical
-    if categorical_cols:
+    # 3. Distribution — first safe categorical
+    if safe_cats:
         tasks.append(AnalysisTask(
             type="distribution",
-            title=f"Top Values — {categorical_cols[0]}",
-            description=f"Frequency count for {categorical_cols[0]}",
-            columns=[categorical_cols[0]],
+            title=f"Top Values — {safe_cats[0]}",
+            description=f"Frequency count for {safe_cats[0]}",
+            columns=[safe_cats[0]],
             chart_type="bar",
             priority=2,
         ))
@@ -246,13 +278,13 @@ def _heuristic_plan(
             priority=3,
         ))
 
-    # 5. Aggregation — if both categorical and numeric
-    if categorical_cols and numeric_cols:
+    # 5. Aggregation — safe categorical × numeric
+    if safe_cats and numeric_cols:
         tasks.append(AnalysisTask(
             type="aggregation",
-            title=f"{numeric_cols[0]} by {categorical_cols[0]}",
-            description=f"Total {numeric_cols[0]} grouped by {categorical_cols[0]}",
-            columns=[categorical_cols[0], numeric_cols[0]],
+            title=f"{numeric_cols[0]} by {safe_cats[0]}",
+            description=f"Total {numeric_cols[0]} grouped by {safe_cats[0]}",
+            columns=[safe_cats[0], numeric_cols[0]],
             chart_type="bar",
             priority=3,
         ))

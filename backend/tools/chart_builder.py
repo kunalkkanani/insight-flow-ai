@@ -124,8 +124,35 @@ def build_plotly_spec(
 
 
 def _bar(rows, x_col, y_col, title) -> dict:
-    x_vals = [str(r.get(x_col, "")) for r in rows]
+    x_raw  = [r.get(x_col) for r in rows]
     y_vals = [_num(r.get(y_col)) for r in rows]
+
+    # Decide axis type:
+    #   • If every x value can be parsed as a float (distribution bins, numeric IDs)
+    #     → "linear" so Plotly spaces them correctly on a number line.
+    #   • Otherwise (team names, genres, categories) → "category" so Plotly never
+    #     tries to interpret strings like "England" or "132" as calendar years.
+    def _all_numeric(vals: list) -> bool:
+        if not vals:
+            return False
+        for v in vals:
+            if v is None:
+                continue
+            try:
+                float(v)
+            except (ValueError, TypeError):
+                return False
+        return True
+
+    if _all_numeric(x_raw):
+        x_vals  = [_num(v) for v in x_raw]   # keep as floats for linear axis
+        x_type  = "linear"
+        hover   = f"%{{x:,.3f}}<br>{y_col or 'count'}: %{{y:,.2f}}<extra></extra>"
+    else:
+        x_vals  = [str(v) if v is not None else "" for v in x_raw]
+        x_type  = "category"
+        hover   = f"<b>%{{x}}</b><br>{y_col or 'count'}: %{{y:,.2f}}<extra></extra>"
+
     return {
         "data": [{
             "type": "bar",
@@ -136,13 +163,11 @@ def _bar(rows, x_col, y_col, title) -> dict:
                 "opacity": 0.85,
                 "line": {"color": "#818cf8", "width": 0.5},
             },
-            "hovertemplate": f"<b>%{{x}}</b><br>{y_col or 'value'}: %{{y:,.2f}}<extra></extra>",
+            "hovertemplate": hover,
         }],
         "layout": {
             **_layout(title),
-            # Force category type so Plotly never misreads numeric-string labels
-            # (e.g. location IDs "132", "138") as year values on a date axis.
-            "xaxis": {**_BASE_LAYOUT["xaxis"], "type": "category", "title": {"text": x_col or ""}},
+            "xaxis": {**_BASE_LAYOUT["xaxis"], "type": x_type, "title": {"text": x_col or ""}},
             "yaxis": {**_BASE_LAYOUT["yaxis"], "title": {"text": y_col or "Count"}},
         },
     }
