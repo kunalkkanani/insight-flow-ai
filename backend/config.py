@@ -43,5 +43,8 @@ class Settings(BaseSettings):
     # ── Session ───────────────────────────────────────────────────────────────
     session_ttl_seconds: int = 1_800  # 30 minutes
 
+    # ── Persistence ───────────────────────────────────────────────────────────
+    db_path: str = "data/insight_flow.db"
+
 
 settings = Settings()

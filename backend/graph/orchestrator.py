@@ -23,6 +23,7 @@ from ..agents.qa import qa_agent
 from ..agents.report import report_agent
 from ..agents.scaling import scaling_agent
 from ..agents.schema import schema_agent
+from ..db import update_session_complete, update_session_error, upsert_session_running
 from ..graph.state import AgentLog, AnalysisState
 
 logger = logging.getLogger(__name__)
@@ -114,6 +115,7 @@ async def run_analysis(session_id: str, initial_state: AnalysisState) -> None:
     """
     Run the full analysis pipeline in the background.
     Pushes SSE events to session queue; sends sentinel None when done.
+    Persists the completed report to SQLite so it survives restarts.
     """
     session = get_session(session_id)
     queue: asyncio.Queue = session["queue"]
@@ -123,17 +125,25 @@ async def run_analysis(session_id: str, initial_state: AnalysisState) -> None:
             initial_state,
             config={"configurable": {"session_id": session_id}},
         )
-        session["report"] = final_state.get("report")
+        report = final_state.get("report", {})
+        session["report"] = report
         session["state"] = final_state
 
-        await queue.put(
-            {
-                "type": "result",
-                "data": final_state.get("report", {}),
-            }
-        )
+        # ── Persist to SQLite ──────────────────────────────────────────────
+        try:
+            update_session_complete(session_id, report or {})
+        except Exception as db_exc:
+            logger.warning("Failed to persist session %s to SQLite: %s", session_id, db_exc)
+
+        await queue.put({"type": "result", "data": report})
+
     except Exception as exc:
         logger.exception("Analysis pipeline failed for session %s", session_id)
+        err_msg = str(exc)
+        try:
+            update_session_error(session_id, err_msg)
+        except Exception:
+            pass
         await queue.put(
             {
                 "type": "error",

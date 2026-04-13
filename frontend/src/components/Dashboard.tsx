@@ -8,6 +8,7 @@ import InsightCards from "./InsightCards";
 import ChartGrid from "./ChartGrid";
 import DataOverview from "./DataOverview";
 import ChatBox from "./ChatBox";
+import ExportPDF from "./ExportPDF";
 import clsx from "clsx";
 
 type Tab = "overview" | "charts" | "insights" | "chat" | "logs";
@@ -45,12 +46,15 @@ export default function Dashboard({ report, logs, sessionId, onReset }: Dashboar
             <span className="capitalize">{report.dataset.strategy} scan</span>
           </p>
         </div>
-        <button
-          onClick={onReset}
-          className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 px-4 py-2 rounded-xl transition-all"
-        >
-          ← New Analysis
-        </button>
+        <div className="flex items-center gap-2">
+          <ExportPDF report={report} />
+          <button
+            onClick={onReset}
+            className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 px-4 py-2 rounded-xl transition-all"
+          >
+            ← New Analysis
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}

@@ -12,16 +12,39 @@ interface DataInputProps {
 
 const DEMO_URLS = [
   {
-    label: "NYC Taxi Trips",
+    label: "Titanic",
+    description: "891 rows · survival analysis",
+    url: "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv",
+  },
+  {
+    label: "NYC Taxi Jan 2023",
+    description: "3M rows · transport · Parquet",
     url: "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2023-01.parquet",
   },
   {
-    label: "Sample Sales CSV",
-    url: "https://raw.githubusercontent.com/plotly/datasets/master/sales_success.csv",
+    label: "Spotify Songs",
+    description: "32K rows · music analytics",
+    url: "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv",
   },
   {
-    label: "Titanic Dataset",
-    url: "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv",
+    label: "Global COVID-19",
+    description: "Country-level · health metrics",
+    url: "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/latest/owid-covid-latest.csv",
+  },
+  {
+    label: "Football Results",
+    description: "47K rows · 150 yrs of matches",
+    url: "https://raw.githubusercontent.com/martj42/international_results/master/results.csv",
+  },
+  {
+    label: "Wine Reviews",
+    description: "130K rows · ratings + regions",
+    url: "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-05-28/winemag-data-130k-v2.csv",
+  },
+  {
+    label: "Netflix Catalog",
+    description: "8K titles · movies & TV",
+    url: "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-04-20/netflix_titles.csv",
   },
 ];
 
@@ -167,9 +190,10 @@ export default function DataInput({ onSessionStart, onError, onUploading }: Data
                   <button
                     key={d.label}
                     onClick={() => setUrl(d.url)}
-                    className="text-xs bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg transition-colors"
+                    className="flex flex-col items-start text-left bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:border-indigo-300 dark:hover:border-indigo-500/40 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-lg transition-colors"
                   >
-                    {d.label}
+                    <span className="text-xs font-medium text-slate-700 dark:text-slate-200">{d.label}</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{d.description}</span>
                   </button>
                 ))}
               </div>

@@ -43,6 +43,7 @@ _BASE_LAYOUT: dict[str, Any] = {
         "linecolor": "#334155",
         "tickfont": {"color": "#94a3b8"},
         "titlefont": {"color": "#cbd5e1"},
+        "automargin": True,
     },
     "yaxis": {
         "gridcolor": "#334155",
@@ -50,17 +51,22 @@ _BASE_LAYOUT: dict[str, Any] = {
         "linecolor": "#334155",
         "tickfont": {"color": "#94a3b8"},
         "titlefont": {"color": "#cbd5e1"},
+        "automargin": True,
     },
-    "margin": {"t": 55, "r": 30, "b": 65, "l": 70},
+    # Legend rendered horizontally below the plot so it never overlaps data.
+    "legend": {
+        "orientation": "h",
+        "y": -0.28,
+        "x": 0.5,
+        "xanchor": "center",
+        "font": {"color": "#94a3b8"},
+        "bgcolor": "rgba(0,0,0,0)",
+    },
+    "margin": {"t": 40, "r": 20, "b": 80, "l": 70},
     "hoverlabel": {
         "bgcolor": "#1e293b",
         "bordercolor": "#475569",
         "font": {"color": "#f1f5f9"},
-    },
-    "legend": {
-        "font": {"color": "#94a3b8"},
-        "bgcolor": "rgba(0,0,0,0)",
-        "bordercolor": "#334155",
     },
 }
 
@@ -174,16 +180,16 @@ def _scatter(rows, x_col, y_col, title) -> dict:
             "y": y_vals,
             "marker": {
                 "color": _AMBER,
-                "opacity": 0.45,
-                "size": 5,
-                "line": {"color": "rgba(0,0,0,0)"},
+                "opacity": 0.65,
+                "size": 6,
+                "line": {"color": "rgba(0,0,0,0)", "width": 0},
             },
-            "hovertemplate": f"{x_col}: %{{x}}<br>{y_col}: %{{y}}<extra></extra>",
+            "hovertemplate": f"{x_col}: %{{x:,.3f}}<br>{y_col}: %{{y:,.3f}}<extra></extra>",
         }],
         "layout": {
             **_layout(title),
-            "xaxis": {**_BASE_LAYOUT["xaxis"], "title": {"text": x_col or ""}},
-            "yaxis": {**_BASE_LAYOUT["yaxis"], "title": {"text": y_col or ""}},
+            "xaxis": {**_BASE_LAYOUT["xaxis"], "title": {"text": x_col or ""}, "automargin": True},
+            "yaxis": {**_BASE_LAYOUT["yaxis"], "title": {"text": y_col or ""}, "automargin": True},
         },
     }
 

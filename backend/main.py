@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .api.routes import router
 from .config import settings
+from .db import init_db
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -30,6 +31,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     # Startup
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
+    init_db()  # create SQLite tables if not present
     logger.info("✓ %s v%s started", settings.app_name, settings.app_version)
     logger.info("  Docs: http://%s:%d/docs", settings.host, settings.port)
     if not settings.anthropic_api_key:

@@ -11,6 +11,15 @@ const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 // Plotly layout overrides per theme
 // ---------------------------------------------------------------------------
 
+// Shared legend config: horizontal, below the plot, never overlaps data
+const LEGEND_SHARED = {
+  orientation: "h" as const,
+  y: -0.28,
+  x: 0.5,
+  xanchor: "center" as const,
+  bgcolor: "rgba(0,0,0,0)",
+};
+
 const LIGHT_LAYOUT = {
   paper_bgcolor: "#ffffff",
   plot_bgcolor:  "#f8fafc",
@@ -18,14 +27,16 @@ const LIGHT_LAYOUT = {
   xaxis: {
     gridcolor: "#e2e8f0", zerolinecolor: "#cbd5e1", linecolor: "#e2e8f0",
     tickfont: { color: "#64748b" }, titlefont: { color: "#475569" },
+    automargin: true,
   },
   yaxis: {
     gridcolor: "#e2e8f0", zerolinecolor: "#cbd5e1", linecolor: "#e2e8f0",
     tickfont: { color: "#64748b" }, titlefont: { color: "#475569" },
+    automargin: true,
   },
   title:      { font: { color: "#1e293b" } },
   hoverlabel: { bgcolor: "#ffffff", bordercolor: "#e2e8f0", font: { color: "#1e293b" } },
-  legend:     { font: { color: "#475569" }, bgcolor: "rgba(0,0,0,0)" },
+  legend:     { ...LEGEND_SHARED, font: { color: "#475569" } },
 };
 
 const DARK_LAYOUT = {
@@ -35,14 +46,16 @@ const DARK_LAYOUT = {
   xaxis: {
     gridcolor: "#334155", zerolinecolor: "#475569", linecolor: "#334155",
     tickfont: { color: "#94a3b8" }, titlefont: { color: "#cbd5e1" },
+    automargin: true,
   },
   yaxis: {
     gridcolor: "#334155", zerolinecolor: "#475569", linecolor: "#334155",
     tickfont: { color: "#94a3b8" }, titlefont: { color: "#cbd5e1" },
+    automargin: true,
   },
   title:      { font: { color: "#e2e8f0" } },
   hoverlabel: { bgcolor: "#1e293b", bordercolor: "#475569", font: { color: "#f1f5f9" } },
-  legend:     { font: { color: "#94a3b8" }, bgcolor: "rgba(0,0,0,0)" },
+  legend:     { ...LEGEND_SHARED, font: { color: "#94a3b8" } },
 };
 
 // ---------------------------------------------------------------------------
@@ -72,7 +85,7 @@ function ChartCard({ chart, themeLayout }: { chart: ChartItem; themeLayout: obje
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 overflow-hidden shadow-sm">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
       <div className="mb-2">
         <h3 className="font-semibold text-slate-800 dark:text-slate-200 text-sm truncate">{chart.title}</h3>
         {chart.description && (
@@ -84,8 +97,8 @@ function ChartCard({ chart, themeLayout }: { chart: ChartItem; themeLayout: obje
         layout={{
           ...(mergedLayout as Partial<Plotly.Layout>),
           autosize: true,
-          height: 280,
-          margin: { t: 20, r: 20, b: 55, l: 65 },
+          height: 300,
+          margin: { t: 36, r: 20, b: 80, l: 70 },
         }}
         config={{
           displayModeBar: true,

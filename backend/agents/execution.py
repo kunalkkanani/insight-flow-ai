@@ -76,9 +76,15 @@ async def execution_agent(
             await queue.put({"type": "log", "data": log_entry})
 
         try:
+            # Anomaly tasks always render as scatter — box with unique row_ids
+            # produces one legend entry per row, completely cluttering the chart.
+            if task_type == "anomaly":
+                chart_type = "scatter"
+
             # ── Generate SQL & chart config ──────────────────────────────
             sql, x_col, y_col = _generate_sql(
-                task_type, task_cols, table, col_lookup, row_count, chart_type
+                task_type, task_cols, table, col_lookup, row_count, chart_type,
+                title=title,
             )
 
             if not sql:
@@ -184,6 +190,7 @@ def _generate_sql(
     col_lookup: dict,
     row_count: int,
     chart_type: str,
+    title: str = "",
 ) -> tuple[str | None, str | None, str | None]:
     """Return (sql, x_col, y_col) for the given task."""
 
@@ -200,23 +207,26 @@ def _generate_sql(
         info = col_lookup.get(col, {})
 
         if info.get("category") == "numeric":
-            # Bucketed histogram
+            # Use 1st–99th percentile bounds so extreme outliers don't
+            # crush all the real data into invisible thin buckets.
             sql = f"""
                 WITH bounds AS (
                     SELECT
-                        MIN({qc(col)})::DOUBLE AS lo,
-                        MAX({qc(col)})::DOUBLE AS hi
+                        PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY {qc(col)}::DOUBLE) AS lo,
+                        PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY {qc(col)}::DOUBLE) AS hi
                     FROM {table}
                     WHERE {qc(col)} IS NOT NULL
                 ),
                 bucketed AS (
                     SELECT
-                        FLOOR(({qc(col)}::DOUBLE - lo) / NULLIF(hi - lo, 0) * 20) AS bucket_idx,
+                        FLOOR(({qc(col)}::DOUBLE - lo) / NULLIF(hi - lo, 0) * 30) AS bucket_idx,
                         COUNT(*) AS count,
-                        MIN({qc(col)})::DOUBLE AS bin_start,
-                        MAX({qc(col)})::DOUBLE AS bin_end
+                        MIN({qc(col)}::DOUBLE) AS bin_start,
+                        MAX({qc(col)}::DOUBLE) AS bin_end
                     FROM {table}, bounds
                     WHERE {qc(col)} IS NOT NULL
+                      AND {qc(col)}::DOUBLE >= lo
+                      AND {qc(col)}::DOUBLE <= hi
                     GROUP BY bucket_idx
                 )
                 SELECT
@@ -224,6 +234,7 @@ def _generate_sql(
                     ROUND(bin_end, 4)   AS bin_end,
                     count
                 FROM bucketed
+                WHERE bucket_idx IS NOT NULL
                 ORDER BY bucket_idx
             """
             return sql, "bin_start", "count"
@@ -239,8 +250,12 @@ def _generate_sql(
             return sql, "category", "count"
 
     elif task_type == "correlation":
-        if len(task_cols) >= 2:
-            col1, col2 = task_cols[0], task_cols[1]
+        # Filter to only the numeric columns the planner specified.
+        numeric_task_cols = [
+            c for c in task_cols if col_lookup.get(c, {}).get("category") == "numeric"
+        ]
+        if len(numeric_task_cols) >= 2:
+            col1, col2 = numeric_task_cols[0], numeric_task_cols[1]
             sample = min(3_000, row_count)
             sql = f"""
                 SELECT
@@ -256,9 +271,36 @@ def _generate_sql(
     elif task_type == "time_series":
         if len(task_cols) >= 2:
             date_col, val_col = task_cols[0], task_cols[1]
+            title_lower = title.lower()
+
+            # Detect desired granularity from the task title, then fall back
+            # to "day" which works well for datasets up to ~2 years of data.
+            if "hour" in title_lower or "hourly" in title_lower or "time of day" in title_lower:
+                # Group by hour-of-day (0–23) — a recurring daily pattern
+                sql = f"""
+                    SELECT
+                        CAST(EXTRACT(HOUR FROM TRY_CAST({qc(date_col)} AS TIMESTAMP)) AS INTEGER) AS hour_of_day,
+                        COUNT(*)                      AS count,
+                        SUM({qc(val_col)}::DOUBLE)   AS total_value,
+                        AVG({qc(val_col)}::DOUBLE)   AS avg_value
+                    FROM {table}
+                    WHERE {qc(date_col)} IS NOT NULL
+                    GROUP BY hour_of_day
+                    ORDER BY hour_of_day
+                """
+                return sql, "hour_of_day", "count"
+
+            elif "week" in title_lower or "weekly" in title_lower:
+                trunc = "week"
+            elif "year" in title_lower or "annual" in title_lower or "monthly" in title_lower:
+                trunc = "month"
+            else:
+                # Default: day — gives ~7–365 points for typical datasets.
+                trunc = "day"
+
             sql = f"""
                 SELECT
-                    DATE_TRUNC('month', TRY_CAST({qc(date_col)} AS TIMESTAMP)) AS period,
+                    DATE_TRUNC('{trunc}', TRY_CAST({qc(date_col)} AS TIMESTAMP)) AS period,
                     SUM({qc(val_col)}::DOUBLE)   AS total_value,
                     AVG({qc(val_col)}::DOUBLE)   AS avg_value,
                     COUNT(*)                      AS count
@@ -266,6 +308,7 @@ def _generate_sql(
                 WHERE {qc(date_col)} IS NOT NULL AND {qc(val_col)} IS NOT NULL
                 GROUP BY period
                 ORDER BY period
+                LIMIT 365
             """
             return sql, "period", "total_value"
         return None, None, None
@@ -273,25 +316,55 @@ def _generate_sql(
     elif task_type == "aggregation":
         if len(task_cols) >= 2:
             cat_col, num_col = task_cols[0], task_cols[1]
-            sql = f"""
-                SELECT
-                    {qc(cat_col)}                        AS category,
-                    COUNT(*)                              AS count,
-                    ROUND(AVG({qc(num_col)}::DOUBLE), 4) AS avg_value,
-                    ROUND(SUM({qc(num_col)}::DOUBLE), 4) AS total_value
-                FROM {table}
-                WHERE {qc(cat_col)} IS NOT NULL AND {qc(num_col)} IS NOT NULL
-                GROUP BY {qc(cat_col)}
-                ORDER BY total_value DESC
-                LIMIT 20
-            """
-            return sql, "category", "total_value"
+            num_info  = col_lookup.get(num_col, {})
+            cat_info  = col_lookup.get(cat_col, {})
+
+            if num_info.get("category") == "numeric":
+                # Standard case: aggregate a numeric column by a categorical one.
+                sql = f"""
+                    SELECT
+                        {qc(cat_col)}                        AS category,
+                        COUNT(*)                              AS count,
+                        ROUND(AVG({qc(num_col)}::DOUBLE), 4) AS avg_value,
+                        ROUND(SUM({qc(num_col)}::DOUBLE), 4) AS total_value
+                    FROM {table}
+                    WHERE {qc(cat_col)} IS NOT NULL AND {qc(num_col)} IS NOT NULL
+                    GROUP BY {qc(cat_col)}
+                    ORDER BY total_value DESC
+                    LIMIT 20
+                """
+                return sql, "category", "total_value"
+
+            else:
+                # Both columns are categorical (e.g. Survived × Sex, or Port × Pclass).
+                # Build a cross-count: each (cat_col, num_col) pair becomes one bar
+                # labelled "A / B", ordered by count descending.
+                sql = f"""
+                    SELECT
+                        CAST({qc(cat_col)} AS VARCHAR)
+                            || ' / '
+                            || CAST({qc(num_col)} AS VARCHAR)  AS category,
+                        COUNT(*)                               AS count
+                    FROM {table}
+                    WHERE {qc(cat_col)} IS NOT NULL AND {qc(num_col)} IS NOT NULL
+                    GROUP BY {qc(cat_col)}, {qc(num_col)}
+                    ORDER BY count DESC
+                    LIMIT 30
+                """
+                return sql, "category", "count"
+
         return None, None, None
 
     elif task_type == "anomaly":
         if not task_cols:
             return None, None, None
-        col = task_cols[0]
+        # Only numeric columns can have z-score outliers — skip if categorical.
+        col = next(
+            (c for c in task_cols if col_lookup.get(c, {}).get("category") == "numeric"),
+            None,
+        )
+        if col is None:
+            return None, None, None
         row_id_expr = "ROW_NUMBER() OVER ()"
         sql = f"""
             WITH stats AS (

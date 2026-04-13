@@ -23,6 +23,7 @@ from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 
 from ..config import settings
+from ..db import load_session, upsert_session_running
 from ..graph.orchestrator import cleanup_session, create_session, get_session, run_analysis, run_qa
 from ..graph.state import AnalysisState
 from .models import (
@@ -120,6 +121,9 @@ async def analyze_file(
         }
     )
 
+    # Record in SQLite immediately so it's visible on restart
+    upsert_session_running(session_id, filename=safe_name)
+
     background_tasks.add_task(run_analysis, session_id, initial_state)
     logger.info("Started analysis session %s for file %s", session_id, safe_name)
     return AnalyzeResponse(session_id=session_id)
@@ -147,6 +151,7 @@ async def analyze_url(
         }
     )
 
+    upsert_session_running(session_id, filename=body.url)
     background_tasks.add_task(run_analysis, session_id, initial_state)
     logger.info("Started analysis session %s for URL %s", session_id, body.url)
     return AnalyzeResponse(session_id=session_id)
@@ -212,14 +217,28 @@ async def stream_events(session_id: str) -> StreamingResponse:
 
 @router.get("/status/{session_id}", response_model=SessionStatus, tags=["Analysis"])
 async def get_status(session_id: str) -> SessionStatus:
-    """Poll for analysis completion without SSE."""
+    """
+    Poll for analysis completion without SSE.
+    Checks in-memory session first; falls back to SQLite for sessions
+    that completed in a previous server run.
+    """
+    # 1 — check live in-memory session
     session = get_session(session_id)
-    if not session:
-        return SessionStatus(session_id=session_id, status="not_found")
+    if session:
+        report = session.get("report")
+        status = "complete" if report else "running"
+        return SessionStatus(session_id=session_id, status=status, report=report)
 
-    report = session.get("report")
-    status = "complete" if report else "running"
-    return SessionStatus(session_id=session_id, status=status, report=report)
+    # 2 — fall back to SQLite persistence
+    persisted = load_session(session_id)
+    if persisted:
+        return SessionStatus(
+            session_id=session_id,
+            status=persisted["status"],
+            report=persisted.get("report"),
+        )
+
+    return SessionStatus(session_id=session_id, status="not_found")
 
 
 # ---------------------------------------------------------------------------

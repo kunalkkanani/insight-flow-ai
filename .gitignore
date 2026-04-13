@@ -19,8 +19,10 @@ backend/.env
 .env.local
 
 # DuckDB temp
-*.db
 *.duckdb
+
+# SQLite persistence (app data, not source)
+data/
 
 # Uploads
 /tmp/insight_flow_uploads/
