@@ -140,7 +140,9 @@ def _bar(rows, x_col, y_col, title) -> dict:
         }],
         "layout": {
             **_layout(title),
-            "xaxis": {**_BASE_LAYOUT["xaxis"], "title": {"text": x_col or ""}},
+            # Force category type so Plotly never misreads numeric-string labels
+            # (e.g. location IDs "132", "138") as year values on a date axis.
+            "xaxis": {**_BASE_LAYOUT["xaxis"], "type": "category", "title": {"text": x_col or ""}},
             "yaxis": {**_BASE_LAYOUT["yaxis"], "title": {"text": y_col or "Count"}},
         },
     }
@@ -188,8 +190,10 @@ def _scatter(rows, x_col, y_col, title) -> dict:
         }],
         "layout": {
             **_layout(title),
-            "xaxis": {**_BASE_LAYOUT["xaxis"], "title": {"text": x_col or ""}, "automargin": True},
-            "yaxis": {**_BASE_LAYOUT["yaxis"], "title": {"text": y_col or ""}, "automargin": True},
+            # Force linear axes so Plotly never auto-interprets numeric values
+            # (row IDs like 1962, trip distances, etc.) as calendar years.
+            "xaxis": {**_BASE_LAYOUT["xaxis"], "type": "linear", "title": {"text": x_col or ""}, "automargin": True},
+            "yaxis": {**_BASE_LAYOUT["yaxis"], "type": "linear", "title": {"text": y_col or ""}, "automargin": True},
         },
     }
 

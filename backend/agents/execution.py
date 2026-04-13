@@ -268,6 +268,12 @@ def _is_plottable(
 # ---------------------------------------------------------------------------
 
 
+def _safe_alias(col: str) -> str:
+    """Return a SQL-safe alias for a column name (replace spaces/special chars with _)."""
+    import re
+    return re.sub(r"[^A-Za-z0-9_]", "_", col)
+
+
 def _generate_sql(
     task_type: str,
     task_cols: list[str],
@@ -342,15 +348,31 @@ def _generate_sql(
         if len(numeric_task_cols) >= 2:
             col1, col2 = numeric_task_cols[0], numeric_task_cols[1]
             sample = min(3_000, row_count)
+            # Use 1st-99th percentile bounds on both axes to exclude corrupt
+            # outlier rows (e.g. trip_distance = 1972.0) that would otherwise
+            # collapse all the real data into an invisible sliver on the chart.
             sql = f"""
-                SELECT
-                    {qc(col1)}::DOUBLE AS {col1},
-                    {qc(col2)}::DOUBLE AS {col2}
-                FROM {table}
-                WHERE {qc(col1)} IS NOT NULL AND {qc(col2)} IS NOT NULL
+                WITH bounds AS (
+                    SELECT
+                        PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY {qc(col1)}::DOUBLE) AS x_lo,
+                        PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY {qc(col1)}::DOUBLE) AS x_hi,
+                        PERCENTILE_CONT(0.01) WITHIN GROUP (ORDER BY {qc(col2)}::DOUBLE) AS y_lo,
+                        PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY {qc(col2)}::DOUBLE) AS y_hi
+                    FROM {table}
+                    WHERE {qc(col1)} IS NOT NULL AND {qc(col2)} IS NOT NULL
+                ),
+                filtered AS (
+                    SELECT {qc(col1)}::DOUBLE AS x_val, {qc(col2)}::DOUBLE AS y_val
+                    FROM {table}, bounds
+                    WHERE {qc(col1)} IS NOT NULL AND {qc(col2)} IS NOT NULL
+                      AND {qc(col1)}::DOUBLE BETWEEN x_lo AND x_hi
+                      AND {qc(col2)}::DOUBLE BETWEEN y_lo AND y_hi
+                )
+                SELECT x_val AS {_safe_alias(col1)}, y_val AS {_safe_alias(col2)}
+                FROM filtered
                 USING SAMPLE {sample} ROWS
             """
-            return sql, col1, col2
+            return sql, _safe_alias(col1), _safe_alias(col2)
         return None, None, None
 
     elif task_type == "time_series":
